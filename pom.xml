@@ -43,40 +43,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <artifactId>maven-shade-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>standard</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <shadedArtifactAttached>false</shadedArtifactAttached>
-                            <createSourcesJar>true</createSourcesJar>
-                            <artifactSet>
-                                <includes>
-                                    <include>org.apache.httpcomponents:httpclient</include>
-                                    <include>org.apache.httpcomponents:httpcore</include>
-                                    <include>commons-codec:commons-codec</include>
-                                </includes>
-                            </artifactSet>
-                            <relocations>
-                                <relocation>
-                                    <pattern>org.apache.http</pattern>
-                                    <shadedPattern>com.ovea.system.internal.jna</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.hyperic</pattern>
-                                    <shadedPattern>com.ovea.system.internal.sigar</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
         </plugins>
     </build>
 

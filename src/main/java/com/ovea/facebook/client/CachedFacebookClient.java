@@ -1,5 +1,6 @@
 package com.ovea.facebook.client;
 
+import com.ovea.cache.*;
 import com.ovea.json.JSONArray;
 import com.ovea.json.JSONObject;
 
