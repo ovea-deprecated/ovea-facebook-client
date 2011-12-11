@@ -1,0 +1,125 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.ovea</groupId>
+        <artifactId>ovea</artifactId>
+        <version>2</version>
+    </parent>
+
+    <artifactId>ovea-facebook-client</artifactId>
+    <version>1.0.ga-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>ovea-facebook-client</name>
+    <description>Facebook client</description>
+
+    <scm>
+        <connection>scm:git:git@github.com:Ovea/ovea-facebook-client.git</connection>
+        <developerConnection>scm:git:git@github.com:Ovea/ovea-facebook-client.git</developerConnection>
+        <url>http://github.com/Ovea/ovea-facebook-client</url>
+    </scm>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.groovy.maven</groupId>
+                <artifactId>gmaven-plugin</artifactId>
+                <version>1.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.codehaus.groovy</groupId>
+                        <artifactId>groovy-all</artifactId>
+                        <version>1.8.1</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                            <goal>testCompile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>standard</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <createSourcesJar>true</createSourcesJar>
+                            <artifactSet>
+                                <includes>
+                                    <include>org.apache.httpcomponents:httpclient</include>
+                                    <include>org.apache.httpcomponents:httpcore</include>
+                                    <include>commons-codec:commons-codec</include>
+                                </includes>
+                            </artifactSet>
+                            <relocations>
+                                <relocation>
+                                    <pattern>org.apache.http</pattern>
+                                    <shadedPattern>com.ovea.system.internal.jna</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>org.hyperic</pattern>
+                                    <shadedPattern>com.ovea.system.internal.sigar</shadedPattern>
+                                </relocation>
+                            </relocations>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.ovea</groupId>
+            <artifactId>ovea-json</artifactId>
+            <version>1.1.ga</version>
+        </dependency>
+
+        <!-- internals -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+
+        <!-- provided or optional -->
+        <dependency>
+            <groupId>com.ovea</groupId>
+            <artifactId>ovea-cache</artifactId>
+            <version>1.0.ga-SNAPSHOT</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <version>1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-all</artifactId>
+            <version>1.8.1</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
+
