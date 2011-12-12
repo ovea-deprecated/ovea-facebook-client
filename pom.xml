@@ -69,7 +69,7 @@
         <dependency>
             <groupId>com.ovea</groupId>
             <artifactId>ovea-cache</artifactId>
-            <version>1.0.ga-SNAPSHOT</version>
+            <version>1.0.ga</version>
             <optional>true</optional>
         </dependency>
         <dependency>
