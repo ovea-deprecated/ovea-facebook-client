@@ -18,7 +18,7 @@ package com.ovea.facebook.client;
 /**
  * @author David Avenante
  */
-public class FacebookException extends Exception {
+public class FacebookException extends RuntimeException {
     public FacebookException(String message, Throwable cause) {
         super(message, cause);
     }
