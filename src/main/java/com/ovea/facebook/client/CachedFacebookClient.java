@@ -31,9 +31,9 @@ public final class CachedFacebookClient implements FacebookClient {
     private final Cache<FacebookToken> cache;
 
     @Inject
-    public CachedFacebookClient(final FacebookClient delegate, MutableCache<FacebookToken> cache) {
+    public CachedFacebookClient(final FacebookClient delegate, ProvidingCache<FacebookToken> cache) {
         this.delegate = delegate;
-        this.cache = new SelfProvidingCache<FacebookToken>(cache, new CacheEntryProvider<FacebookToken>() {
+        this.cache = new ConcurrentProvidingCache<FacebookToken>(cache, new CacheEntryProvider<FacebookToken>() {
             @Override
             public CacheEntry<FacebookToken> get(String key) throws CacheException {
                 try {
