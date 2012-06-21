@@ -15,9 +15,10 @@
  */
 package com.ovea.facebook.client;
 
+import com.ovea.json.JSON;
 import com.ovea.json.JSONArray;
-import com.ovea.json.JSONException;
 import com.ovea.json.JSONObject;
+import com.ovea.json.JSONType;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
@@ -106,9 +107,9 @@ public final class DefaultFacebookClient implements FacebookClient {
                 }
             });
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e.getMessage(), e);
+            throw new FacebookException(e.getMessage(), e);
         } catch (KeyManagementException e) {
-            throw new RuntimeException(e.getMessage(), e);
+            throw new FacebookException(e.getMessage(), e);
         }
     }
 
@@ -119,13 +120,13 @@ public final class DefaultFacebookClient implements FacebookClient {
         qparams.add(new BasicNameValuePair("client_secret", clientSecret));
         qparams.add(new BasicNameValuePair("code", verificationCode));
         qparams.add(new BasicNameValuePair("redirect_uri", redirectUri));
-        String result = get("https", "graph.facebook.com", "/oauth/access_token", qparams);
+        JSONType result = get("https", "graph.facebook.com", "/oauth/access_token", qparams);
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("accessToken for code " + verificationCode + " = " + result);
         }
         checkErrorOn(result);
         LOGGER.info("verification code : " + verificationCode + " / Response : " + result);
-        String[] split = result.split("&");
+        String[] split = result.asObject().getString("data").split("&");
         return new FacebookToken(split[0].split("=")[1], Integer.parseInt(split[1].split("=")[1]));
     }
 
@@ -133,33 +134,24 @@ public final class DefaultFacebookClient implements FacebookClient {
     public JSONObject me(FacebookToken accessToken) throws FacebookException {
         List<NameValuePair> qparams = new ArrayList<NameValuePair>();
         qparams.add(new BasicNameValuePair(ACCESS_TOKEN, accessToken.value()));
-        String result = get("https", "graph.facebook.com", "/me", qparams);
+        JSONType result = get("https", "graph.facebook.com", "/me", qparams);
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("me for token " + accessToken + " : " + result);
         }
-        try {
-            checkErrorOn(result);
-            return new JSONObject(result);
-        } catch (JSONException e) {
-            throw new RuntimeException("Received non JSON response from FB me request for access token " + accessToken + " :\n" + result, e);
-        }
+        checkErrorOn(result);
+        return result.asObject();
     }
 
     @Override
     public JSONArray friends(FacebookToken accessToken) throws FacebookException {
         List<NameValuePair> qparams = new ArrayList<NameValuePair>();
         qparams.add(new BasicNameValuePair(ACCESS_TOKEN, accessToken.value()));
-        String result = get("https", "graph.facebook.com", "/me/friends", qparams);
+        JSONType result = get("https", "graph.facebook.com", "/me/friends", qparams);
         if (LOGGER.isLoggable(Level.FINE)) {
             LOGGER.fine("friends for token " + accessToken + " : " + result);
         }
-        try {
-            checkErrorOn(result);
-            return new JSONObject(result).getArray("data");
-        } catch (JSONException e) {
-            LOGGER.log(Level.WARNING, "Received non JSON response from FB friends request for access token " + accessToken + " :\n" + result, e);
-        }
-        return new JSONArray();
+        checkErrorOn(result);
+        return result.asObject().getArray("data");
     }
 
     @Override
@@ -169,8 +161,7 @@ public final class DefaultFacebookClient implements FacebookClient {
         for (Map.Entry<String, String> entry : facebookFeed.asMap().entrySet()) {
             nvps.add(new BasicNameValuePair(entry.getKey(), entry.getValue()));
         }
-        String result = post("https", "graph.facebook.com", "/" + to + "/feed", null, nvps);
-        checkErrorOn(result);
+        checkErrorOn(post("https", "graph.facebook.com", "/" + to + "/feed", null, nvps));
     }
 
     @Override
@@ -193,28 +184,37 @@ public final class DefaultFacebookClient implements FacebookClient {
         return authorizationUrl;
     }
 
-    private void checkErrorOn(String result) throws FacebookException {
-        if ("".equals(result)) {
-            throw new FacebookException("Facebook connection problem: empty response.");
-        }
-        if (result.contains("error") || result.contains("OAuthException")) {
-            throw new FacebookException(new JSONObject(result).getObject("error").getString("message"));
+    private void checkErrorOn(JSONType result) throws FacebookException {
+        /*
+ {
+   "error": {
+      "type": "OAuthException",
+      "message": "Invalid OAuth access token signature."
+   }
+}
+        */
+        if (result.isObject() && result.asObject().has("error")) {
+            throw new FacebookException(result.asObject().getObject("error").optString("message", "<no-details>"));
         }
     }
 
-    private String get(String proto, String host, String path, List<NameValuePair> qparams) {
+    private JSONType get(String proto, String host, String path, List<NameValuePair> qparams) {
         try {
             URI uri = URIUtils.createURI(proto, host, -1, path, qparams == null ? null : URLEncodedUtils.format(qparams, "UTF-8"), null);
             HttpResponse response = httpClient().execute(new HttpGet(uri));
-            String res = EntityUtils.toString(response.getEntity());
-            //System.out.println(res);
-            return res;
+            String contentType = response.getEntity().getContentType().getValue();
+            contentType = contentType == null ? "" : contentType.toLowerCase();
+            if (contentType.startsWith("application/json") || contentType.startsWith("text/javascript")) {
+                return JSON.parse(EntityUtils.toString(response.getEntity()));
+            } else {
+                return JSON.object().put("data", EntityUtils.toString(response.getEntity()));
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+            throw new FacebookException(e.getMessage(), e);
         }
     }
 
-    private String post(String proto, String host, String path, List<NameValuePair> qparams, List<NameValuePair> pparams) {
+    private JSONType post(String proto, String host, String path, List<NameValuePair> qparams, List<NameValuePair> pparams) {
         try {
             URI uri = URIUtils.createURI(proto, host, -1, path, qparams == null ? null : URLEncodedUtils.format(qparams, "UTF-8"), null);
             HttpPost post = new HttpPost(uri);
@@ -222,11 +222,15 @@ public final class DefaultFacebookClient implements FacebookClient {
                 post.setEntity(new UrlEncodedFormEntity(pparams, HTTP.UTF_8));
             }
             HttpResponse response = httpClient().execute(post);
-            String res = EntityUtils.toString(response.getEntity());
-            //System.out.println(res);
-            return res;
+            String contentType = response.getEntity().getContentType().getValue();
+            contentType = contentType == null ? "" : contentType.toLowerCase();
+            if (contentType.startsWith("application/json") || contentType.startsWith("text/javascript")) {
+                return JSON.parse(EntityUtils.toString(response.getEntity()));
+            } else {
+                return JSON.object().put("data", EntityUtils.toString(response.getEntity()));
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+            throw new FacebookException(e.getMessage(), e);
         }
     }
 
